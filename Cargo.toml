@@ -1,0 +1,11 @@
+[package]
+name = "media_control"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+futures = "0.3.30"
+json = "0.12.4"
+media_session = { git = "https://github.com/virashu/media_session.rs", version = "0.1.0" }
+saaba = { git = "https://github.com/virashu/saaba.rs", version = "0.1.0" }
+tokio = { version = "1.39.2", features = ["macros", "rt-multi-thread"] }
