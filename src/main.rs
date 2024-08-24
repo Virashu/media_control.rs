@@ -1,6 +1,10 @@
-use futures::executor::{self, block_on};
+use futures::executor::block_on;
 use json::JsonValue;
 use media_session::{MediaInfo, MediaSession};
+use std::{
+    sync::{Arc, Mutex},
+    thread::spawn,
+};
 
 fn jsonify(info: MediaInfo) -> JsonValue {
     json::object! {
@@ -13,26 +17,54 @@ fn jsonify(info: MediaInfo) -> JsonValue {
         duration: info.duration,
         position: info.position,
 
+        cover_data: info.cover_b64,
+
         state: info.state,
     }
 }
 
 fn main() {
-    async fn get_player() -> MediaSession {
-        MediaSession::new().await
-    }
+    colog::default_builder()
+        .filter(None, log::LevelFilter::Debug)
+        .filter(Some("saaba"), log::LevelFilter::Warn)
+        .init();
 
-    let player = executor::block_on(get_player());
+    let data: Arc<Mutex<MediaInfo>> = Arc::new(Mutex::new(MediaInfo::new()));
+    
+    let data_session = Arc::clone(&data);
+    let thread_session = spawn(|| {
+        let handler = move |mi: MediaInfo| {
+            *data_session.lock().unwrap() = mi;
+        };
 
-    let mut app = saaba::App::new();
+        block_on(async {
+            let mut player = MediaSession::new().await;
+            player.set_callback(handler);
 
-    app.get("/", move |_| {
-        let info = block_on(player.clone().get_info());
-
-        let content: String = json::stringify(jsonify(info));
-
-        saaba::Response::from_content_string(content)
+            loop {
+                player.update().await;
+            }
+        });
     });
 
-    app.run("0.0.0.0", 8888);
+    let thread_http = spawn(|| {
+        let mut app = saaba::App::new();
+
+        app.get("/data", move |_| {
+            let info = data.lock().unwrap().clone();
+            let content: String = json::stringify(jsonify(info));
+
+            let mut res = saaba::Response::from_content_string(content);
+            res.set_header("Access-Control-Allow-Origin", "*");
+            res
+        });
+
+        match app.run("0.0.0.0", 8888) {
+            Err(_) => log::error!("Address is occupied"),
+            Ok(_) => {}
+        }
+    });
+
+    thread_session.join().unwrap();
+    thread_http.join().unwrap();
 }

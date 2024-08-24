@@ -4,8 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+colog = "1.3.0"
 futures = "0.3.30"
 json = "0.12.4"
+log = "0.4.22"
 media_session = { git = "https://github.com/virashu/media_session.rs", version = "0.1.0" }
 saaba = { git = "https://github.com/virashu/saaba.rs", version = "0.1.0" }
-tokio = { version = "1.39.2", features = ["macros", "rt-multi-thread"] }
