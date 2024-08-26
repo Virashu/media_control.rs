@@ -256,7 +256,7 @@ dependencies = [
 [[package]]
 name = "media_session"
 version = "0.1.0"
-source = "git+https://github.com/virashu/media_session.rs#efc923568b8b0e2bc7379ba73a3ba452109a0cad"
+source = "git+https://github.com/virashu/media_session.rs#a6123b1421eed30bfee92f9d5a4b6310b2c03fd1"
 dependencies = [
  "base64",
  "futures",
@@ -332,7 +332,7 @@ checksum = "7a66a03ae7c801facd77a29370b4faec201768915ac14a721ba36f20bc9c209b"
 [[package]]
 name = "saaba"
 version = "0.1.0"
-source = "git+https://github.com/virashu/saaba.rs#a8c4511295fb79a3b6475e8cc9964dd327c841b0"
+source = "git+https://github.com/virashu/saaba.rs#311547ce4d7e0c7218bcc6341ce6ebcfcc1f251e"
 dependencies = [
  "colog",
  "log",
