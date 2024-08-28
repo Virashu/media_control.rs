@@ -47,6 +47,7 @@ fn main() {
     colog::default_builder()
         .filter(None, log::LevelFilter::Debug)
         .filter(Some("saaba"), log::LevelFilter::Warn)
+        .filter(Some("media_session"), log::LevelFilter::Warn)
         .init();
 
     let data: Arc<Mutex<MediaInfo>> = Arc::new(Mutex::new(MediaInfo::new()));
@@ -67,10 +68,10 @@ fn main() {
                     match control {
                         Controls::Next => player.next().await,
                         Controls::Prev => player.prev().await,
-                        Controls::Play => MediaSession::play(&player).await,
-                        Controls::Pause => MediaSession::pause(&player).await,
-                        Controls::Stop => MediaSession::stop(&player).await,
-                        Controls::TogglePause => MediaSession::toggle_pause(&player).await,
+                        Controls::Play => player.play().await,
+                        Controls::Pause => player.pause().await,
+                        Controls::Stop => player.stop().await,
+                        Controls::TogglePause => player.toggle_pause().await,
                     }
                     .unwrap();
                 }
