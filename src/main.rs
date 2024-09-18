@@ -1,6 +1,5 @@
 use futures::executor::block_on;
-use json::JsonValue;
-use media_session::{MediaInfo, MediaSession, MediaSessionControls};
+use media_session::{traits::MediaSessionControls, MediaInfo, MediaSession};
 
 use std::panic;
 use std::process;
@@ -9,23 +8,6 @@ use std::sync::{
     Arc, Mutex,
 };
 use std::thread;
-
-fn jsonify(info: MediaInfo) -> JsonValue {
-    json::object! {
-        title: info.title,
-        artist: info.artist,
-
-        album_title: info.album_title,
-        album_artist: info.album_artist,
-
-        duration: info.duration,
-        position: info.position,
-
-        cover_data: info.cover_b64,
-
-        state: info.state,
-    }
-}
 
 #[derive(Copy, Clone)]
 enum Controls {
@@ -79,10 +61,9 @@ fn run_http_server(data: MediaInfoMutex, channel_tx: Sender<Controls>) {
 
     app.get("/data", move |_| {
         let info = data.lock().unwrap().clone();
-        let content: String = json::stringify(jsonify(info));
+        let content: String = json::stringify(info);
 
-        saaba::Response::from_content_string(content)
-            .with_header("Access-Control-Allow-Origin", "*")
+        saaba::Response::from(content).with_header("Access-Control-Allow-Origin", "*")
     });
 
     for (codename, control) in ACTIONS {
