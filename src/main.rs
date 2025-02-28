@@ -8,6 +8,8 @@ use std::sync::{
     Arc, Mutex,
 };
 use std::thread;
+use std::thread::sleep;
+use std::time::Duration;
 
 #[derive(Copy, Clone)]
 enum Controls {
@@ -36,8 +38,7 @@ fn run_media_session(data: MediaInfoMutex, channel_rx: Receiver<Controls>) {
     };
 
     block_on(async {
-        let mut player = MediaSession::new().await;
-        player.set_callback(handler);
+        let player = MediaSession::new().await;
 
         loop {
             while let Ok(control) = channel_rx.try_recv() {
@@ -51,7 +52,8 @@ fn run_media_session(data: MediaInfoMutex, channel_rx: Receiver<Controls>) {
                 }
                 .unwrap();
             }
-            player.update().await;
+            handler(player.get_info());
+            sleep(Duration::from_millis(10));
         }
     });
 }
@@ -59,32 +61,48 @@ fn run_media_session(data: MediaInfoMutex, channel_rx: Receiver<Controls>) {
 fn run_http_server(data: MediaInfoMutex, channel_tx: Sender<Controls>) {
     let mut app = saaba::App::new();
 
+    let data_ref = data.clone();
     app.get("/data", move |_| {
-        let info = data.lock().unwrap().clone();
+        let info = data_ref.lock().unwrap().clone();
         let content: String = json::stringify(info);
 
         saaba::Response::from(content).with_header("Access-Control-Allow-Origin", "*")
     });
 
+    let data_ref = data.clone();
+    app.get("/cover", move |_| {
+        let info = data_ref.lock().unwrap().clone();
+        let content: String = format!("{{\"cover_b64\": \"{}\"}}", info.cover_b64);
+
+        saaba::Response::from(content).with_header("Access-Control-Allow-Origin", "*")
+    });
+
+    let data_ref = data.clone();
+    app.get("/no-cover", move |_| {
+        let mut info = data_ref.lock().unwrap().clone();
+        info.cover_b64 = String::new();
+        let content: String = json::stringify(info);
+
+        saaba::Response::from(content).with_header("Access-Control-Allow-Origin", "*")
+    });
+    
+
     for (codename, control) in ACTIONS {
         let path = format!("/control/{}", codename);
-        let control = control.clone();
+        let control = *control;
 
         let tx_clone = channel_tx.clone();
 
-        app.post(path.as_str(), move |_| {
+        app.post(&path, move |_| {
             log::info!("Command: {}", codename);
             tx_clone.send(control).unwrap();
             saaba::Response::new()
         });
     }
 
-    match app.run("0.0.0.0", 8888) {
-        Err(_) => {
-            log::error!("Address is occupied");
-            panic!("Address is occupied");
-        }
-        _ => {}
+    if app.run("0.0.0.0", 8888).is_err() {
+        log::error!("Address is occupied");
+        panic!("Address is occupied");
     }
 }
 
